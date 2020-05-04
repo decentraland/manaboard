@@ -13,6 +13,8 @@ import {
 } from "decentraland-ui";
 import "decentraland-ui/lib/styles.css";
 import React, { useEffect, useState } from "react";
+import Chart from "./Chart";
+import { ParentSize } from "@vx/responsive";
 
 function niceNumber(n: number): string {
   const parts = [];
@@ -43,7 +45,7 @@ function App() {
         "sec-fetch-site": "same-site",
       },
       body:
-        '{"query":"{\\n  timeSummaries(first: 500\\n) {\\n    id\\n    timestamp\\n    burned\\n  }\\n  latests(first: 5) {\\n    id\\n    supply\\n    burned\\n  }\\n}\\n","variables":null}',
+        '{"query":"{\\n  timeSummaries(first: 1000, orderDirection: asc, orderBy:timestamp\\n) {\\n    id\\n    timestamp\\n    burned\\n  }\\n  latests(first: 5) {\\n    id\\n    supply\\n    burned\\n  }\\n}\\n","variables":null}',
       method: "POST",
       mode: "cors",
       credentials: "omit",
@@ -59,6 +61,17 @@ function App() {
   const percent = (+burned * 100) / 1e18 / total;
   const minTablet = 650;
   const minDesktop = 920;
+
+  let totalMinusBurned = total;
+  let timeSum: any = [
+    { burned: 0, timestamp: 1502755200 },
+    { burned: 0, timestamp: 1514110400 },
+    ...timeSummary,
+  ].map((value: any) => {
+    totalMinusBurned -= value.burned / 1e18;
+    return { id: value.timestamp * 1000, remaining: +Math.floor(totalMinusBurned) };
+  });
+
   return (
     <div className="container">
       <Navbar isFullscreen />
@@ -83,19 +96,32 @@ function App() {
         <Container>
           <Responsive maxWidth={minTablet}>
             <Grid columns="1" centered>
-              {Content(timeSummary)}
+              {Content()}
             </Grid>
           </Responsive>
           <Responsive minWidth={minTablet + 1} maxWidth={minDesktop - 1}>
             <Grid columns="2" centered>
-              {Content(timeSummary)}
+              {Content()}
             </Grid>
           </Responsive>
           <Responsive minWidth={minDesktop}>
             <Grid columns="3" centered>
-              {Content(timeSummary)}
+              {Content()}
             </Grid>
           </Responsive>
+          <div style={{ marginTop: "20px" }}>
+            {MakeCard(
+              "MANA remaining over time",
+              //<pre>{JSON.stringify(latest, null, 2)} </pre>
+              <>
+                <ParentSize>
+                  {({ width }) => (
+                    <Chart width={width} height={width / 2} data={timeSum} />
+                  )}
+                </ParentSize>
+              </>
+            )}
+          </div>
         </Container>
         <div style={{ height: "100px" }}>&nbsp;</div>
       </Page>
@@ -104,7 +130,7 @@ function App() {
   );
 }
 
-function Content(latest: any) {
+function Content() {
   return (
     <>
       {MakeCard(
@@ -118,10 +144,6 @@ function Content(latest: any) {
       {MakeCard(
         "What are the consequences?",
         "The less mana there is, the more valuable each token becomes. Any marginal demand for MANA would cause an increase in the MANA price, leading to an appreciation of the token."
-      )}
-      {MakeCard(
-        "What are the consequences?",
-        <pre>{JSON.stringify(latest, null, 2)} </pre>
       )}
     </>
   );
